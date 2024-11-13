@@ -4,7 +4,7 @@ const { text } = require("express");
 const z = require("zod");
 const aesEncryption = require("aes-encryption");
 const jwt = require("jsonwebtoken");
-const { log } = require(logging.js);
+const { log } = require("./logging");
 require("dotenv").config();
 
 let db;
@@ -28,11 +28,7 @@ const inputScheme = z
 
 const tweetInputScheme = z
   .object({
-    username: z
-      .string()
-      .min(1, { message: "Username cannot be empty." })
-      .email({ message: "Username needs to be a Email address." }),
-    timestamp: z.string().time(),
+    username: z.string().min(1, { message: "Username cannot be empty." }),
     text: z.string(),
   })
   .strip();
@@ -40,51 +36,79 @@ const tweetInputScheme = z
 const getFeed = async (req, res) => {
   const query = "SELECT username, timestamp, text FROM tweets ORDER BY id DESC";
   const authHeader = req.headers["authorization"];
+  const user = req.headers["username"];
   const token = authHeader.split(" ")[1];
-  jwt.verify(token, secretKey, async (err) => {
-    if (err) {
-      req.log.error("Token invalid!");
-      return res.sendStatus(403);
-    }
-    const tweets = await queryDB(db, query);
-    if (tweets.length >= 1) {
-      for (let i = 0; i < tweets.length; i++) {
-        tweets[i].username = aes.decrypt(tweets[i].username);
-        tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
-        tweets[i].text = aes.decrypt(tweets[i].text);
+  try {
+    jwt.verify(token, secretKey, async (err) => {
+      if (err) {
+        log("Warning", `${user}`, `Could not verify Token!`);
+        return res.sendStatus(403);
       }
-    }
-    res.removeHeader("X-Powered-By");
-    res.json(tweets);
-  });
+      try {
+        const tweets = await queryDB(db, query);
+        if (tweets.length >= 1) {
+          for (let i = 0; i < tweets.length; i++) {
+            tweets[i].username = aes.decrypt(tweets[i].username);
+            tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
+            tweets[i].text = aes.decrypt(tweets[i].text);
+          }
+        }
+        log("Info", `${user}`, `Successfully loaded feed!`);
+        res.removeHeader("X-Powered-By");
+        res.json(tweets);
+      } catch (err) {
+        log(
+          "Error",
+          "Database",
+          `There was an Error when trying to get tweets from the database: ${err}`
+        );
+      }
+    });
+  } catch (err) {
+    log("Error", "Server", `Error trying to verify a token!`);
+  }
 };
 
 const postTweet = async (req, res) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader.split(" ")[1];
-  const { username, timestamp, text } = req.body;
+  const { reqUsername, timestamp, text } = req.body;
+
   const input = await tweetInputScheme.safeParse(req.body);
-  if (input.success == false) {
+  if (input.success === true) {
     jwt.verify(token, secretKey, async (err, decoded) => {
       if (err) {
-        req.log.error("Token invalid!");
+        log("Warning", `${reqUsername}`, `Error verifying Token!`);
         return res.sendStatus(403);
       }
 
       const { username } = decoded.data;
 
-      if (username !== username) {
-        req.log.error("Token invalid!");
+      if (reqUsername !== username) {
+        log(
+          "Warning",
+          `${reqUsername}`,
+          `Token does not match the signed in user!`
+        );
         return res.sendStatus(403);
       }
     });
   }
 
-  const encryptedUsername = aes.encrypt(username);
+  const encryptedUsername = aes.encrypt(reqUsername);
   const encryptedTimestamp = aes.encrypt(timestamp);
   const encryptedText = aes.encrypt(text);
   const query = `INSERT INTO tweets (username, timestamp, text) VALUES ('${encryptedUsername}', '${encryptedTimestamp}', '${encryptedText}')`;
-  insertDB(db, query);
+  try {
+    insertDB(db, query);
+  } catch (err) {
+    log(
+      "Error",
+      "Database",
+      `There was an Error when trying to insert int o the database: ${err}`
+    );
+  }
+  log("Info", `${reqUsername}`, `Successfully created a post!`);
   res.removeHeader("X-Powered-By");
   res.json({ status: "ok" });
 };
@@ -94,6 +118,7 @@ const login = async (req, res) => {
   if (input.success == false) {
     return res.status(400).send(
       input.error.issues.map(({ message }) => {
+        log("Warning", "unknown", "Input is invalid!");
         return { message };
       })
     );
@@ -101,31 +126,42 @@ const login = async (req, res) => {
 
   const { username, password } = req.body;
   const query = `SELECT password FROM users WHERE username = '${username}'`;
-  const userPassword = await queryDB(db, query);
-  if (userPassword.length === 1) {
-    const checkPassword = await bcrypt.compareSync(
-      password,
-      userPassword[0].password
-    );
-    if (checkPassword === true) {
-      const jwtToken = jwt.sign(
-        {
-          exp: Math.floor(Date.now() / 1000) + 60 * 60,
-          data: { username },
-        },
-        secretKey
+  try {
+    const userPassword = await queryDB(db, query);
+    if (userPassword.length === 1) {
+      const checkPassword = await bcrypt.compareSync(
+        password,
+        userPassword[0].password
       );
-      const userQuery = `SELECT * FROM users WHERE username = '${username}'`;
-      const user = await queryDB(db, userQuery);
-      res.removeHeader("X-Powered-By");
-      res.status(200).send({ user: username, token: jwtToken });
+      if (checkPassword === true) {
+        const jwtToken = jwt.sign(
+          {
+            exp: Math.floor(Date.now() / 1000) + 60 * 60,
+            data: { username },
+          },
+          secretKey
+        );
+        const userQuery = `SELECT * FROM users WHERE username = '${username}'`;
+        const user = await queryDB(db, userQuery);
+        log("Info", `${username}`, `Successful login!`);
+        res.removeHeader("X-Powered-By");
+        res.status(200).send({ user: username, token: jwtToken });
+      } else {
+        log("Warning", "unknown", `Incorrect login for ${username}!`);
+        res.removeHeader("X-Powered-By");
+        res.json("Your login is incorrect.");
+      }
     } else {
+      log("Warning", "unknown", `Login on non existent username: ${username}`);
       res.removeHeader("X-Powered-By");
       res.json("Your login is incorrect.");
     }
-  } else {
-    res.removeHeader("X-Powered-By");
-    res.json("Your login is incorrect.");
+  } catch (err) {
+    log(
+      "Error",
+      "Database",
+      `There was an Error when trying to get the User: ${err}`
+    );
   }
 };
 
