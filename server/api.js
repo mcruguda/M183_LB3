@@ -65,7 +65,7 @@ const getFeed = async (req, res) => {
       }
     });
   } catch (err) {
-    log("Error", "Server", `Error trying to verify a token!`);
+    log("Error", "Server", `Error trying to verify a token: ${err}`);
   }
 };
 
