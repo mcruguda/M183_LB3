@@ -1,5 +1,6 @@
 const { initializeDatabase, queryDB, insertDB } = require("./database");
 const bcrypt = require("bcrypt");
+const { text } = require("express");
 const z = require("zod");
 
 let db;
@@ -20,13 +21,41 @@ const inputScheme = z
   })
   .strip();
 
+const tweetInputScheme = z
+  .object({
+    username: z
+      .string()
+      .min(1, { message: "Username cannot be empty." })
+      .email({ message: "Username needs to be a Email address." }),
+    timestamp: z.string().time(),
+    text: z.string(),
+  })
+  .strip();
+
 const getFeed = async (req, res) => {
-  const query = req.query.q;
+  const query = "SELECT * FROM tweets ORDER BY id DESC";
   const tweets = await queryDB(db, query);
   res.json(tweets);
 };
 
-const postTweet = (req, res) => {
+const postTweet = async (req, res) => {
+  const input = await tweetInputScheme.safeParse(req.body);
+  if (input.success == false) {
+    return res.status(400).send(
+      input.error.issues.map(({ message }) => {
+        return { message };
+      })
+    );
+  }
+
+  const query = `INSERT INTO tweets (username, timestamp, text) VALUES ('${username}', '${timestamp}', '${text}')`;
+  await fetch("/api/feed", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ query }),
+  });
   insertDB(db, req.body.query);
   res.json({ status: "ok" });
 };

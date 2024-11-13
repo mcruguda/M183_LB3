@@ -34,8 +34,12 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const getFeed = async () => {
-    const query = "SELECT * FROM tweets ORDER BY id DESC";
-    const response = await fetch(`/api/feed?q=${query}`);
+    const response = await fetch("/api/getFeed", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
     const tweets = await response.json();
     const tweetsHTML = tweets.map(generateTweet).join("");
     document.getElementById("feed").innerHTML = tweetsHTML;
@@ -45,13 +49,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const username = user.username;
     const timestamp = new Date().toISOString();
     const text = newTweetInput.value;
-    const query = `INSERT INTO tweets (username, timestamp, text) VALUES ('${username}', '${timestamp}', '${text}')`;
-    await fetch("/api/feed", {
+    const response = await fetch("/api/postTweet", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ query }),
+      body: JSON.stringify({ username, timestamp, text }),
     });
     await getFeed();
     newTweetInput.value = "";
