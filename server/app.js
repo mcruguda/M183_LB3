@@ -13,13 +13,13 @@ const limiter = rateLimit({
 const app = express();
 app.use(express.json());
 app.use(limiter);
+app.disable("X-Powered-By");
 const server = http.createServer(app);
 
 // deliver static files from the client folder like css, js, images
 app.use(express.static("client"));
 // route for the homepage
 app.get("/", (req, res) => {
-  res.removeHeader("X-Powered-By");
   res.sendFile(__dirname + "/client/index.html");
 });
 

@@ -35,6 +35,7 @@ const tweetInputScheme = z
 
 const getFeed = async (req, res) => {
   const query = "SELECT username, timestamp, text FROM tweets ORDER BY id DESC";
+  //ToDo: Midlewares
   const authHeader = req.headers["authorization"];
   const user = req.headers["username"];
   const token = authHeader.split(" ")[1];
@@ -54,7 +55,6 @@ const getFeed = async (req, res) => {
           }
         }
         log("Info", `${user}`, `Successfully loaded feed!`);
-        res.removeHeader("X-Powered-By");
         res.json(tweets);
       } catch (err) {
         log(
@@ -109,7 +109,6 @@ const postTweet = async (req, res) => {
     );
   }
   log("Info", `${reqUsername}`, `Successfully created a post!`);
-  res.removeHeader("X-Powered-By");
   res.json({ status: "ok" });
 };
 
@@ -129,7 +128,7 @@ const login = async (req, res) => {
   try {
     const userPassword = await queryDB(db, query);
     if (userPassword.length === 1) {
-      const checkPassword = await bcrypt.compareSync(
+      const checkPassword = bcrypt.compareSync(
         password,
         userPassword[0].password
       );
@@ -144,16 +143,13 @@ const login = async (req, res) => {
         const userQuery = `SELECT * FROM users WHERE username = '${username}'`;
         const user = await queryDB(db, userQuery);
         log("Info", `${username}`, `Successful login!`);
-        res.removeHeader("X-Powered-By");
         res.status(200).send({ user: username, token: jwtToken });
       } else {
         log("Warning", "unknown", `Incorrect login for ${username}!`);
-        res.removeHeader("X-Powered-By");
         res.json("Your login is incorrect.");
       }
     } else {
       log("Warning", "unknown", `Login on non existent username: ${username}`);
-      res.removeHeader("X-Powered-By");
       res.json("Your login is incorrect.");
     }
   } catch (err) {
