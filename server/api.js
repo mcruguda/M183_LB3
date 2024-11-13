@@ -5,6 +5,7 @@ const z = require("zod");
 const aesEncryption = require("aes-encryption");
 const jwt = require("jsonwebtoken");
 const { log } = require("./logging");
+const { verifyToken } = require("./jwtMiddleware");
 require("dotenv").config();
 
 let db;
@@ -15,8 +16,8 @@ aes.setSecretKey(cryptoKey);
 
 const initializeAPI = async (app) => {
   db = await initializeDatabase();
-  app.get("/api/feed", getFeed);
-  app.post("/api/feed", postTweet);
+  app.get("/api/feed", verifyToken, getFeed);
+  app.post("/api/feed", verifyToken, postTweet);
   app.post("/api/login", login);
 };
 
@@ -31,67 +32,43 @@ const tweetInputScheme = z.object({
 
 const getFeed = async (req, res) => {
   const query = "SELECT username, timestamp, text FROM tweets ORDER BY id DESC";
-  //ToDo: Midlewares
-  const authHeader = req.headers["authorization"];
-  const user = req.headers["username"];
-  const token = authHeader.split(" ")[1];
+  const user = req.username["username"];
   try {
-    jwt.verify(token, secretKey, async (err) => {
-      if (err) {
-        log("Warning", `${user}`, `Could not verify Token!`);
-        return res.sendStatus(403);
+    const tweets = await queryDB(db, query);
+    if (tweets.length >= 1) {
+      for (let i = 0; i < tweets.length; i++) {
+        tweets[i].username = aes.decrypt(tweets[i].username);
+        tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
+        tweets[i].text = aes.decrypt(tweets[i].text);
       }
-      try {
-        const tweets = await queryDB(db, query);
-        if (tweets.length >= 1) {
-          for (let i = 0; i < tweets.length; i++) {
-            tweets[i].username = aes.decrypt(tweets[i].username);
-            tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
-            tweets[i].text = aes.decrypt(tweets[i].text);
-          }
-        }
-        log("Info", `${user}`, `Successfully loaded feed!`);
-        res.json(tweets);
-      } catch (err) {
-        log(
-          "Error",
-          "Database",
-          `There was an Error when trying to get tweets from the database: ${err}`
-        );
-      }
-    });
+    }
+    log("Info", `${user}`, `Successfully loaded feed!`);
+    res.json(tweets);
   } catch (err) {
-    log("Error", "Server", `Error trying to verify a token: ${err}`);
+    log(
+      "Error",
+      "Database",
+      `There was an Error when trying to get tweets from the database: ${err}`
+    );
   }
 };
 
 const postTweet = async (req, res) => {
-  const authHeader = req.headers["authorization"];
-  const token = authHeader.split(" ")[1];
   const { reqUsername, timestamp, text } = req.body;
 
   const input = tweetInputScheme.safeParse(req.body);
   if (input.success === true) {
-    jwt.verify(token, secretKey, async (err, decoded) => {
-      if (err) {
-        log("Warning", `${reqUsername}`, `Error verifying Token!`);
-        return res.sendStatus(403);
-      }
-
-      const { username } = decoded.data;
-
-      if (reqUsername !== username) {
-        log(
-          "Warning",
-          `${reqUsername}`,
-          `Token does not match the signed in user!`
-        );
-        return res.sendStatus(403);
-      }
-    });
+    if (reqUsername !== req.username["username"]) {
+      log(
+        "Warning",
+        `${req.username["username"]}`,
+        `Token does not match the signed in user!`
+      );
+      return res.sendStatus(403);
+    }
   }
 
-  const encryptedUsername = aes.encrypt(reqUsername);
+  const encryptedUsername = aes.encrypt(req.username["username"]);
   const encryptedTimestamp = aes.encrypt(timestamp);
   const encryptedText = aes.encrypt(text);
   const query = `INSERT INTO tweets (username, timestamp, text) VALUES ('${encryptedUsername}', '${encryptedTimestamp}', '${encryptedText}')`;
@@ -104,7 +81,7 @@ const postTweet = async (req, res) => {
       `There was an Error when trying to insert int o the database: ${err}`
     );
   }
-  log("Info", `${reqUsername}`, `Successfully created a post!`);
+  log("Info", `${req.username["username"]}`, `Successfully created a post!`);
   res.json({ status: "ok" });
 };
 
