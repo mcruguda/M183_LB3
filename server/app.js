@@ -19,6 +19,7 @@ const server = http.createServer(app);
 app.use(express.static("client"));
 // route for the homepage
 app.get("/", (req, res) => {
+  res.removeHeader("X-Powered-By");
   res.sendFile(__dirname + "/client/index.html");
 });
 
