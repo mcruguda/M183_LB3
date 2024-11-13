@@ -35,6 +35,7 @@ const tweetInputScheme = z
 const getFeed = async (req, res) => {
   const query = "SELECT * FROM tweets ORDER BY id DESC";
   const tweets = await queryDB(db, query);
+  res.removeHeader("X-Powered-By");
   res.json(tweets);
 };
 
@@ -57,6 +58,7 @@ const postTweet = async (req, res) => {
     body: JSON.stringify({ query }),
   });
   insertDB(db, req.body.query);
+  res.removeHeader("X-Powered-By");
   res.json({ status: "ok" });
 };
 
@@ -82,11 +84,14 @@ const login = async (req, res) => {
     if (checkPassword === true) {
       const userQuery = `SELECT * FROM users WHERE username = '${username}'`;
       const user = await queryDB(db, userQuery);
+      res.removeHeader("X-Powered-By");
       res.json(user[0]);
     } else {
+      res.removeHeader("X-Powered-By");
       res.json("Your login is incorrect.");
     }
   } else {
+    res.removeHeader("X-Powered-By");
     res.json("Your login is incorrect.");
   }
 };
