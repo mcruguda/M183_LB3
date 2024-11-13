@@ -1,5 +1,6 @@
 const { initializeDatabase, queryDB, insertDB } = require("./database");
 const bcrypt = require("bcrypt");
+const z = require("zod");
 
 let db;
 
