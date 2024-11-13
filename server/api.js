@@ -4,8 +4,8 @@ const { text } = require("express");
 const z = require("zod");
 const aesEncryption = require("aes-encryption");
 const jwt = require("jsonwebtoken");
+const { log } = require(logging.js);
 require("dotenv").config();
-const fs = require("fs");
 
 let db;
 const secretKey = process.env.SECRETKEY;
