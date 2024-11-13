@@ -21,10 +21,7 @@ const initializeAPI = async (app) => {
 
 const inputScheme = z
   .object({
-    username: z
-      .string()
-      .min(1, { message: "Username cannot be empty." })
-      .email({ message: "Username needs to be a Email address." }),
+    username: z.string().min(1, { message: "Username cannot be empty." }),
   })
   .strip();
 
