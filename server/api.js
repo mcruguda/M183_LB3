@@ -24,14 +24,14 @@ const inputScheme = z
   .object({
     username: z.string().min(1, { message: "Username cannot be empty." }),
   })
-  .strip();
+  .strict();
 
 const tweetInputScheme = z
   .object({
     username: z.string().min(1, { message: "Username cannot be empty." }),
     text: z.string(),
   })
-  .strip();
+  .strict();
 
 const getFeed = async (req, res) => {
   const query = "SELECT username, timestamp, text FROM tweets ORDER BY id DESC";
@@ -118,7 +118,7 @@ const login = async (req, res) => {
     return res.status(400).send(
       input.error.issues.map(({ message }) => {
         log("Warning", "unknown", "Input is invalid!");
-        return { message };
+        return "Invalid login!";
       })
     );
   }
