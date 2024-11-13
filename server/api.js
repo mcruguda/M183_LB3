@@ -89,10 +89,17 @@ const login = async (req, res) => {
       userPassword[0].password
     );
     if (checkPassword === true) {
+      const jwtToken = jwt.sign(
+        {
+          exp: Math.floor(Date.now() / 1000) + 60 * 60,
+          data: { username },
+        },
+        secretKey
+      );
       const userQuery = `SELECT * FROM users WHERE username = '${username}'`;
       const user = await queryDB(db, userQuery);
       res.removeHeader("X-Powered-By");
-      res.json(user[0]);
+      res.status(200).send({ user: username, token: jwtToken });
     } else {
       res.removeHeader("X-Powered-By");
       res.json("Your login is incorrect.");
