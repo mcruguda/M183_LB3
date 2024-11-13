@@ -5,6 +5,7 @@ const z = require("zod");
 const aesEncryption = require("aes-encryption");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
+const fs = require("fs");
 
 let db;
 const secretKey = process.env.SECRETKEY;
