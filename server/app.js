@@ -1,10 +1,18 @@
 const express = require("express");
 const http = require("http");
 const { initializeAPI } = require("./api");
+const rateLimit = require("express-rate-limit");
+
+const limiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 50,
+  message: "To many requests.",
+});
 
 // Create the express server
 const app = express();
 app.use(express.json());
+app.use(limiter);
 const server = http.createServer(app);
 
 // deliver static files from the client folder like css, js, images
