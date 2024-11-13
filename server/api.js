@@ -2,8 +2,14 @@ const { initializeDatabase, queryDB, insertDB } = require("./database");
 const bcrypt = require("bcrypt");
 const { text } = require("express");
 const z = require("zod");
+const aesEncryption = require("aes-encryption");
+require("dotenv").config();
 
 let db;
+const secretKey = process.env.SECRETKEY;
+const cryptoKey = process.env.CRYPTOKEY;
+const aes = new AesEncryption();
+aes.setSecretKey(cryptoKey);
 
 const initializeAPI = async (app) => {
   db = await initializeDatabase();
@@ -35,6 +41,11 @@ const tweetInputScheme = z
 const getFeed = async (req, res) => {
   const query = "SELECT * FROM tweets ORDER BY id DESC";
   const tweets = await queryDB(db, query);
+  for (let i = 0; i < tweets.length; i++) {
+    tweets[i].username = aes.decrypt(tweets[i].username);
+    tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
+    tweets[i].text = aes.decrypt(tweets[i].text);
+  }
   res.removeHeader("X-Powered-By");
   res.json(tweets);
 };
@@ -49,14 +60,10 @@ const postTweet = async (req, res) => {
     );
   }
 
-  const query = `INSERT INTO tweets (username, timestamp, text) VALUES ('${username}', '${timestamp}', '${text}')`;
-  await fetch("/api/feed", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ query }),
-  });
+  const encryptedUsername = aes.encrypt(username);
+  const encryptedTimestamp = aes.encrypt(timestamp);
+  const encryptedText = aes.encrypt(text);
+  const query = `INSERT INTO tweets (username, timestamp, text) VALUES ('${encryptedUsername}', '${encryptedTimestamp}', '${encryptedText}')`;
   insertDB(db, req.body.query);
   res.removeHeader("X-Powered-By");
   res.json({ status: "ok" });
