@@ -74,7 +74,7 @@ const postTweet = async (req, res) => {
   const token = authHeader.split(" ")[1];
   const { reqUsername, timestamp, text } = req.body;
 
-  const input = await tweetInputScheme.safeParse(req.body);
+  const input = tweetInputScheme.safeParse(req.body);
   if (input.success === true) {
     jwt.verify(token, secretKey, async (err, decoded) => {
       if (err) {
@@ -113,7 +113,7 @@ const postTweet = async (req, res) => {
 };
 
 const login = async (req, res) => {
-  const input = await inputScheme.safeParse(req.body);
+  const input = inputScheme.safeParse(req.body);
   if (input.success == false) {
     return res.status(400).send(
       input.error.issues.map(({ message }) => {
