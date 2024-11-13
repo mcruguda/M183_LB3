@@ -41,31 +41,42 @@ const tweetInputScheme = z
 
 const getFeed = async (req, res) => {
   const query = "SELECT * FROM tweets ORDER BY id DESC";
-  const tweets = await queryDB(db, query);
-  for (let i = 0; i < tweets.length; i++) {
-    tweets[i].username = aes.decrypt(tweets[i].username);
-    tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
-    tweets[i].text = aes.decrypt(tweets[i].text);
-  }
-  res.removeHeader("X-Powered-By");
-  res.json(tweets);
+  const authHeader = req.headers["authorization"];
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, secretKey, async (err) => {
+    if (err) {
+      req.log.error("Token invalid!");
+      return res.sendStatus(403);
+    }
+    const tweets = await queryDB(db, query);
+    for (let i = 0; i < tweets.length; i++) {
+      tweets[i].username = aes.decrypt(tweets[i].username);
+      tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
+      tweets[i].text = aes.decrypt(tweets[i].text);
+    }
+    res.removeHeader("X-Powered-By");
+    res.json(tweets);
+  });
 };
 
 const postTweet = async (req, res) => {
+  const authHeader = req.headers["authorization"];
+  const token = authHeader.split(" ")[1];
   const input = await tweetInputScheme.safeParse(req.body);
   if (input.success == false) {
-    return res.status(400).send(
-      input.error.issues.map(({ message }) => {
-        return { message };
-      })
-    );
+    jwt.verify(token, secretKey, async (err) => {
+      if (err) {
+        req.log.error("Token invalid!");
+        return res.sendStatus(403);
+      }
+    });
   }
 
   const encryptedUsername = aes.encrypt(username);
   const encryptedTimestamp = aes.encrypt(timestamp);
   const encryptedText = aes.encrypt(text);
   const query = `INSERT INTO tweets (username, timestamp, text) VALUES ('${encryptedUsername}', '${encryptedTimestamp}', '${encryptedText}')`;
-  insertDB(db, req.body.query);
+  insertDB(db, query);
   res.removeHeader("X-Powered-By");
   res.json({ status: "ok" });
 };

@@ -34,10 +34,12 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const getFeed = async () => {
+    const token = localStorage.getItem("token");
     const response = await fetch("/api/getFeed", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
     });
     const tweets = await response.json();
@@ -46,6 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   const postTweet = async () => {
+    const token = localStorage.getItem("token");
     const username = user.username;
     const timestamp = new Date().toISOString();
     const text = newTweetInput.value;
@@ -53,6 +56,7 @@ document.addEventListener("DOMContentLoaded", () => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
       },
       body: JSON.stringify({ username, timestamp, text }),
     });
