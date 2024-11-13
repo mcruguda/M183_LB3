@@ -81,7 +81,6 @@ const login = async (req, res) => {
   }
 
   const { username, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
   const query = `SELECT password FROM users WHERE username = '${username}'`;
   const userPassword = await queryDB(db, query);
   if (userPassword.length === 1) {
