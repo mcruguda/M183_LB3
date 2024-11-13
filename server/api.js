@@ -11,6 +11,15 @@ const initializeAPI = async (app) => {
   app.post("/api/login", login);
 };
 
+const inputScheme = z
+  .object({
+    username: z
+      .string()
+      .min(1, { message: "Username cannot be empty." })
+      .email({ message: "Username needs to be a Email address." }),
+  })
+  .strip();
+
 const getFeed = async (req, res) => {
   const query = req.query.q;
   const tweets = await queryDB(db, query);
@@ -23,6 +32,15 @@ const postTweet = (req, res) => {
 };
 
 const login = async (req, res) => {
+  const input = await inputScheme.safeParse(req.body);
+  if (input.success == false) {
+    return res.status(400).send(
+      input.error.issues.map(({ message }) => {
+        return { message };
+      })
+    );
+  }
+
   const { username, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
   const query = `SELECT password FROM users WHERE username = '${username}'`;
