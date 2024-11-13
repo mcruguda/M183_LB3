@@ -7,7 +7,7 @@ function log(prio, user, message) {
     `[${prio}] ${timestamp} - ${user}: ${message} \n`,
     function (err) {
       if (err) throw err;
-      console.log("Saved!");
+      console.log(`[${prio}] ${timestamp} - ${user}: ${message}`);
     }
   );
 }
