@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const getFeed = async () => {
     const token = localStorage.getItem("token");
-    const response = await fetch("/api/getFeed", {
+    const response = await fetch("/api/feed", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -49,10 +49,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const postTweet = async () => {
     const token = localStorage.getItem("token");
-    const username = user.username;
-    const timestamp = new Date().toISOString();
+    const username = localStorage.getItem("user");
+    const timestamp = new Date();
     const text = newTweetInput.value;
-    const response = await fetch("/api/postTweet", {
+    const response = await fetch("/api/feed", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -73,6 +73,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   logoutButton.addEventListener("click", () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     window.location.href = "/login.html";
   });
 

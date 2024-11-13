@@ -37,7 +37,7 @@ const tweetInputScheme = z
   .strip();
 
 const getFeed = async (req, res) => {
-  const query = "SELECT * FROM tweets ORDER BY id DESC";
+  const query = "SELECT username, timestamp, text FROM tweets ORDER BY id DESC";
   const authHeader = req.headers["authorization"];
   const token = authHeader.split(" ")[1];
   jwt.verify(token, secretKey, async (err) => {
@@ -46,10 +46,12 @@ const getFeed = async (req, res) => {
       return res.sendStatus(403);
     }
     const tweets = await queryDB(db, query);
-    for (let i = 0; i < tweets.length; i++) {
-      tweets[i].username = aes.decrypt(tweets[i].username);
-      tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
-      tweets[i].text = aes.decrypt(tweets[i].text);
+    if (tweets.length >= 1) {
+      for (let i = 0; i < tweets.length; i++) {
+        tweets[i].username = aes.decrypt(tweets[i].username);
+        tweets[i].timestamp = aes.decrypt(tweets[i].timestamp);
+        tweets[i].text = aes.decrypt(tweets[i].text);
+      }
     }
     res.removeHeader("X-Powered-By");
     res.json(tweets);
@@ -68,9 +70,9 @@ const postTweet = async (req, res) => {
         return res.sendStatus(403);
       }
 
-      const { user } = decoded.data;
+      const { username } = decoded.data;
 
-      if (username !== user) {
+      if (username !== username) {
         req.log.error("Token invalid!");
         return res.sendStatus(403);
       }
