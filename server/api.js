@@ -3,12 +3,13 @@ const bcrypt = require("bcrypt");
 const { text } = require("express");
 const z = require("zod");
 const aesEncryption = require("aes-encryption");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 let db;
 const secretKey = process.env.SECRETKEY;
 const cryptoKey = process.env.CRYPTOKEY;
-const aes = new AesEncryption();
+const aes = new aesEncryption();
 aes.setSecretKey(cryptoKey);
 
 const initializeAPI = async (app) => {
