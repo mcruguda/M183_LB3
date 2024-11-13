@@ -62,10 +62,18 @@ const getFeed = async (req, res) => {
 const postTweet = async (req, res) => {
   const authHeader = req.headers["authorization"];
   const token = authHeader.split(" ")[1];
+  const { username, timestamp, text } = req.body;
   const input = await tweetInputScheme.safeParse(req.body);
   if (input.success == false) {
-    jwt.verify(token, secretKey, async (err) => {
+    jwt.verify(token, secretKey, async (err, decoded) => {
       if (err) {
+        req.log.error("Token invalid!");
+        return res.sendStatus(403);
+      }
+
+      const { user } = decoded.data;
+
+      if (username !== user) {
         req.log.error("Token invalid!");
         return res.sendStatus(403);
       }
