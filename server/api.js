@@ -23,12 +23,23 @@ const postTweet = (req, res) => {
 
 const login = async (req, res) => {
   const { username, password } = req.body;
-  const query = `SELECT * FROM users WHERE username = '${username}' AND password = '${password}'`;
-  const user = await queryDB(db, query);
-  if (user.length === 1) {
-    res.json(user[0]);
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const query = `SELECT password FROM users WHERE username = '${username}'`;
+  const userPassword = await queryDB(db, query);
+  if (userPassword.length === 1) {
+    const checkPassword = await bcrypt.compareSync(
+      password,
+      userPassword[0].password
+    );
+    if (checkPassword === true) {
+      const userQuery = `SELECT * FROM users WHERE username = '${username}'`;
+      const user = await queryDB(db, userQuery);
+      res.json(user[0]);
+    } else {
+      res.json("Your login is incorrect.");
+    }
   } else {
-    res.json(null);
+    res.json("Your login is incorrect.");
   }
 };
 
