@@ -20,18 +20,14 @@ const initializeAPI = async (app) => {
   app.post("/api/login", login);
 };
 
-const inputScheme = z
-  .object({
-    username: z.string().min(1, { message: "Username cannot be empty." }),
-  })
-  .strict();
+const inputScheme = z.object({
+  username: z.string().min(1, { message: "Username cannot be empty." }),
+});
 
-const tweetInputScheme = z
-  .object({
-    username: z.string().min(1, { message: "Username cannot be empty." }),
-    text: z.string(),
-  })
-  .strict();
+const tweetInputScheme = z.object({
+  username: z.string().min(1, { message: "Username cannot be empty." }),
+  text: z.string(),
+});
 
 const getFeed = async (req, res) => {
   const query = "SELECT username, timestamp, text FROM tweets ORDER BY id DESC";
